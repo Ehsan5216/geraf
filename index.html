@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ثبت گراف مدیریت اتوماسیون و ارتباطات</title>
+  <meta name="description" content="اپلیکیشن پیشرونده (PWA) آفلاین ثبت گراف، گزارش‌ها و فعالیت‌های میدانی مدیریت اتوماسیون و ارتباطات">
+  <meta property="og:title" content="ثبت گراف مدیریت اتوماسیون و ارتباطات">
+  <meta property="og:description" content="اپلیکیشن پیشرونده (PWA) آفلاین ثبت گراف، گزارش‌ها و فعالیت‌های میدانی مدیریت اتوماسیون و ارتباطات">
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ثبت گراف">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            industrial: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+              amber: '#f59e0b',
+              amberDark: '#d97706',
+            }
+          },
+          fontFamily: {
+            sans: ['Vazirmatn', 'Shabnam', 'Tahoma', 'Segoe UI', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- jsQR Library for fast robust in-browser QR & Barcode scanning across all devices -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+  <!-- Google Font: Vazirmatn for crisp Persian industrial typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Vazirmatn', Tahoma, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea, select {
+      user-select: text;
+    }
+    /* اسکرول‌بار ظریف صنعتی */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-16 flex flex-col antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- =========================================================================
+       نوار هدر اصلی و وضعیت شبکه / دکمه مدیران
+       ========================================================================= -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-xl px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-2">
+      
+      <!-- عنوان و لوگوی سیستم -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-lg shadow-amber-500/20 flex items-center justify-center shrink-0">
+          <img src="icon.svg" class="w-full h-full rounded-[10px]" alt="لوگو">
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
+            <span>مدیریت اتوماسیون و ارتباطات</span>
+          </h1>
+          <p class="text-[11px] text-amber-400 font-medium">سامانه ثبت گراف و گزارش میدانی (PWA)</p>
+        </div>
+      </div>
+
+      <!-- کنترل‌های هدر: وضعیت شبکه، صف آفلاین و دکمه مدیران -->
+      <div class="flex items-center gap-2">
+        <!-- وضعیت آنلاین/آفلاین -->
+        <div id="networkStatusBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-300 shadow-sm" title="وضعیت ارتباط با شبکه">
+          <span id="networkStatusDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="networkStatusText" class="hidden sm:inline">بررسی وضعیت...</span>
+        </div>
+
+        <!-- صف در انتظار ارسال -->
+        <button id="pendingQueueBadge" type="button" onclick="syncPendingRecords()" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-950/80 border border-amber-500/50 text-amber-300 hover:bg-amber-900/80 transition shadow" title="کلیک برای همگام‌سازی فوری">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span>صف: <span id="pendingQueueCount" class="font-mono">0</span></span>
+        </button>
+
+        <!-- دکمه نصب PWA -->
+        <button id="pwaInstallBtn" type="button" class="hidden inline-flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold border border-blue-500 shadow-sm transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span class="hidden sm:inline">نصب PWA</span>
+        </button>
+
+        <!-- دکمه ورود مدیران سیستم (درخواست بخش اول) -->
+        <button id="navAdminBtn" type="button" onclick="openAdminAccess()" class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <span>مدیران سیستم</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       بخش اول: صفحه ثبت گراف (صفحه اصلی - Home View)
+       ========================================================================= -->
+  <main id="homeViewSection" class="flex-1 max-w-4xl w-full mx-auto p-3 sm:p-5 space-y-4">
+
+    <!-- بنر اطلاع‌رسانی ارسال بلادرنگ صف در اولین اتصال به اینترنت -->
+    <div id="realtimeSyncAlertBanner" class="hidden bg-gradient-to-r from-amber-950/90 via-slate-900 to-amber-950/90 border border-amber-500/50 rounded-2xl p-3.5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span class="w-3 h-3 rounded-full bg-amber-400 animate-ping shrink-0"></span>
+        <div>
+          <h4 class="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-2">
+            <span>تعداد</span>
+            <span id="bannerPendingCount" class="font-mono text-white text-base font-black px-1.5 py-0.5 rounded bg-amber-900/60 border border-amber-500/40">0</span>
+            <span>گراف آفلاین در انتظار اولین اتصال اینترنت</span>
+          </h4>
+          <p class="text-[11px] text-slate-300 mt-1">
+            سیستم در وضعیت آماده‌باش است؛ به محض برقراری اولین ارتباط اینترنتی، کلیه این گراف‌ها بلادرنگ و خودکار به سرور مرکزی ارسال خواهند شد.
+          </p>
+        </div>
+      </div>
+      <button type="button" onclick="syncPendingRecords({ isAuto: false })" class="self-end sm:self-center shrink-0 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        <span>ارسال فوری هم‌اکنون</span>
+      </button>
+    </div>
+
+    <!-- کارت ۱: مدیریت اشخاص و اطلاعات مجری (دکمه و خلاصه پرسنلی) -->
+    <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 shadow-lg relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-2 h-full bg-amber-500"></div>
+      
+      <!-- در صورت عدم ثبت اطلاعات تکنسین -->
+      <div id="operatorMissingAlert" class="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-right">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-slate-100">مشخصات مجری عملیات ثبت نشده است</h2>
+            <p class="text-xs text-slate-400">برای ثبت گراف، ابتدا اطلاعات پرسنلی خود را در سیستم ذخیره نمایید.</p>
+          </div>
+        </div>
+        <button type="button" onclick="openModal('personnelModal')" class="w-full sm:w-auto px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>مدیریت و ثبت اشخاص</span>
+        </button>
+      </div>
+
+      <!-- در صورت ثبت بودن اطلاعات تکنسین در localStorage -->
+      <div id="operatorSummaryContainer" class="hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-400">تکنسین / مجری جاری:</span>
+              <span id="opFullName" class="font-extrabold text-sm sm:text-base text-amber-300">---</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">کد: <span id="opPersonnelId">---</span></span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              <span>واحد: <strong id="opUnit" class="text-slate-300">---</strong></span>
+              <span>•</span>
+              <span>سرپرستی: <strong id="opSupervision" class="text-slate-300">---</strong></span>
+              <span>•</span>
+              <span>سمت: <strong id="opRole" class="text-slate-300">---</strong></span>
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="openModal('personnelModal')" class="self-end sm:self-center px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition">
+          ویرایش مشخصات
+        </button>
+      </div>
+
+    </div>
+
+    <!-- فرم اصلی ثبت گراف -->
+    <form id="graphRegistrationForm" class="space-y-4">
+
+      <!-- کارت ۲: ورودی‌های QRCODE و بارکد صنعتی -->
+      <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-lg space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <h2 class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+            <span>ورودی‌های بارکد و QR Code تجهیزات</span>
+          </h2>
+          <span class="text-[11px] text-amber-400/90 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">اسکن با دوربین (بدون امکان تایپ دستی)</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- فیلد ASETT -->
+          <div class="space-y-1.5">
+            <label for="asettInput" class="block text-xs font-bold text-slate-200">
+              ASETT
+            </label>
+            <div class="flex gap-2">
+              <input type="text" id="asettInput" readonly onclick="openQrScannerModal('asettInput')" placeholder="جهت اسکن بارکد کلیک کنید..." class="flex-1 cursor-pointer bg-slate-950/80 border border-slate-700 hover:border-amber-500 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-amber-300 placeholder-slate-500 transition outline-none select-none">
+              <button type="button" id="clearAsettBtn" onclick="clearQrField('asettInput')" class="hidden px-2.5 bg-slate-800 hover:bg-red-950 hover:text-red-300 text-slate-400 border border-slate-700 rounded-xl transition" title="پاکسازی کد اسکن‌شده">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+              <button type="button" onclick="openQrScannerModal('asettInput')" class="px-3.5 bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 border border-slate-700 rounded-xl text-slate-200 flex items-center justify-center transition shadow-sm" title="اسکن بارکد ASETT با دوربین">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- فیلد Rebuildable -->
+          <div class="space-y-1.5">
+            <label for="rebuildableInput" class="block text-xs font-bold text-slate-200">
+              Rebuildable
+            </label>
+            <div class="flex gap-2">
+              <input type="text" id="rebuildableInput" readonly onclick="openQrScannerModal('rebuildableInput')" placeholder="جهت اسکن بارکد کلیک کنید..." class="flex-1 cursor-pointer bg-slate-950/80 border border-slate-700 hover:border-amber-500 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-amber-300 placeholder-slate-500 transition outline-none select-none">
+              <button type="button" id="clearRebuildableBtn" onclick="clearQrField('rebuildableInput')" class="hidden px-2.5 bg-slate-800 hover:bg-red-950 hover:text-red-300 text-slate-400 border border-slate-700 rounded-xl transition" title="پاکسازی کد اسکن‌شده">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+              <button type="button" onclick="openQrScannerModal('rebuildableInput')" class="px-3.5 bg-slate-800 hover:bg-slate-700 active:bg-amber-500 active:text-slate-950 border border-slate-700 rounded-xl text-slate-200 flex items-center justify-center transition shadow-sm" title="اسکن بارکد Rebuildable با دوربین">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- کارت ۳: دوربین و تصویر تجهیز/محیط (پشت موبایل) -->
+      <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-lg space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <h2 class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>تصویر تجهیز و محیط کار</span>
+          </h2>
+          <span class="text-[11px] text-slate-400">ثبت با دوربین پشت موبایل</span>
+        </div>
+
+        <input type="file" id="cameraFileInput" accept="image/*" capture="environment" class="hidden">
+
+        <!-- کادر بدون تصویر -->
+        <div id="cameraUploadPlaceholder" class="border-2 border-dashed border-slate-700 hover:border-amber-500/80 rounded-xl p-5 text-center transition flex flex-col items-center justify-center cursor-pointer bg-slate-950/40" onclick="document.getElementById('cameraFileInput').click()">
+          <div class="w-12 h-12 rounded-full bg-slate-800 text-amber-400 flex items-center justify-center mb-2 shadow">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <span class="text-sm font-bold text-slate-200">کلیک جهت باز کردن دوربین یا انتخاب عکس</span>
+          <span class="text-xs text-slate-400 mt-1">تصویر به صورت فشرده با مُهر زمان و تاریخ شمسی ذخیره می‌شود.</span>
+        </div>
+
+        <!-- پیش‌نمایش تصویر -->
+        <div id="cameraPreviewContainer" class="hidden relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+          <img id="cameraPreviewImg" src="" alt="عکس تجهیز" class="w-full max-h-72 object-contain bg-slate-950">
+          <div class="absolute bottom-2 left-2 right-2 flex justify-between items-center bg-slate-900/80 backdrop-blur-md p-2 rounded-lg border border-slate-700/80">
+            <span class="text-xs text-emerald-400 font-bold flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              تصویر با موفقیت الحاق شد
+            </span>
+            <div class="flex gap-2">
+              <button type="button" onclick="document.getElementById('cameraFileInput').click()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-md transition">عکس مجدد</button>
+              <button type="button" onclick="removeCapturedImage()" class="px-2.5 py-1 bg-red-950/80 hover:bg-red-900 text-red-300 text-xs font-semibold rounded-md transition">حذف عکس</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- کارت ۴: نوار کشویی پویا با زیرفیلدهای شرطی (Activity Select & Conditional Fields) -->
+      <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-lg space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <h2 class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+            <span>نوع فعالیت میدانی و اطلاعات تکمیلی</span>
+          </h2>
+          <span class="text-xs text-red-400 font-bold">* الزامی</span>
+        </div>
+
+        <!-- نوار کشویی اصلی ۹ موردی -->
+        <div class="space-y-1.5">
+          <label for="activityTypeSelect" class="block text-xs font-bold text-slate-200">انتخاب نوع اقدام / عملیات:</label>
+          <select id="activityTypeSelect" onchange="handleActivityChange()" required class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 transition outline-none cursor-pointer">
+            <option value="">-- لطفاً نوع فعالیت را انتخاب فرمایید --</option>
+            <option value="انجام بازدید و سرکشی">انجام بازدید و سرکشی</option>
+            <option value="سرویس و هواگیری و نظافت">سرویس و هواگیری و نظافت</option>
+            <option value="آچارکشی اتصالات و تبدیلات مکانیکی و گلندها">آچارکشی اتصالات و تبدیلات مکانیکی و گلندها</option>
+            <option value="آچارکشی ترمینال‌ها و فیوزها">آچارکشی ترمینال‌ها و فیوزها</option>
+            <option value="مونتاژ تجهیزات">مونتاژ تجهیزات (همراه با کد تجهیز)</option>
+            <option value="دمونتاژ تجهیزات">دمونتاژ تجهیزات (همراه با کد تجهیز)</option>
+            <option value="انجام تنظیمات حرفه‌ای">انجام تنظیمات حرفه‌ای (همراه با تگ تجهیز و مرجع)</option>
+            <option value="انجام کابل‌کشی">انجام کابل‌کشی (همراه با متراژ)</option>
+            <option value="انجام کاندوئیت‌کاری">انجام کاندوئیت‌کاری (همراه با متراژ)</option>
+          </select>
+        </div>
+
+        <!-- زیرفیلد شرطی ۱: شماره شناسایی تجهیز (برای مونتاژ و دمونتاژ تجهیزات) -->
+        <div id="equipIdGroup" class="hidden p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/40 space-y-1.5 animate-fadeIn">
+          <label for="equipmentIdInput" class="block text-xs font-bold text-amber-300">
+            شماره شناسایی تجهیز (<span class="font-mono">Equipment ID</span>): <span class="text-red-400">*</span>
+          </label>
+          <input type="text" id="equipmentIdInput" placeholder="مثال: EQ-PLC-RACK-04" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2 text-sm font-mono text-slate-100 outline-none">
+        </div>
+
+        <!-- زیرفیلد شرطی ۲: تنظیمات حرفه‌ای (شماره تجهیز + شماره مرجع) -->
+        <div id="settingsGroup" class="hidden p-3.5 rounded-xl bg-blue-950/30 border border-blue-500/40 space-y-3 animate-fadeIn">
+          <span class="text-xs font-bold text-blue-300 block">مشخصات ابزار و تنظیم حرفه‌ای:</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label for="deviceTagInput" class="block text-xs text-slate-300">شماره تجهیز (Device Tag): <span class="text-red-400">*</span></label>
+              <input type="text" id="deviceTagInput" placeholder="مثال: FIT-102A" class="w-full bg-slate-950 border border-slate-700 focus:border-blue-400 rounded-xl px-3.5 py-2 text-sm font-mono text-slate-100 outline-none">
+            </div>
+            <div class="space-y-1">
+              <label for="referenceToolInput" class="block text-xs text-slate-300">شماره مرجع (لپ‌تاپ، هارت، کالیبراتور): <span class="text-red-400">*</span></label>
+              <input type="text" id="referenceToolInput" placeholder="مثال: HART-475-CALIB / LAPTOP-AUTO-02" class="w-full bg-slate-950 border border-slate-700 focus:border-blue-400 rounded-xl px-3.5 py-2 text-sm font-mono text-slate-100 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- زیرفیلد شرطی ۳: متراژ (برای کابل‌کشی و کاندوئیت‌کاری) -->
+        <div id="footageGroup" class="hidden p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/40 space-y-1.5 animate-fadeIn">
+          <label for="footageInput" class="block text-xs font-bold text-emerald-300">
+            متراژ اجرا شده (بر حسب متر): <span class="text-red-400">*</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <input type="number" step="0.5" id="footageInput" placeholder="مثال: 45.5" class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2 text-sm font-mono text-slate-100 outline-none">
+            <span class="text-xs font-bold text-slate-400 shrink-0">متر</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- کارت ۵: فیلد گزارش (Textarea بزرگ جهت شرح کامل) -->
+      <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-lg space-y-2">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <label for="reportNotesInput" class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            <span>شرح کامل گزارش فنی / اقدامات انجام‌شده</span>
+          </label>
+          <span class="text-xs text-red-400 font-bold">* الزامی</span>
+        </div>
+        <textarea id="reportNotesInput" required rows="4" placeholder="شرح کامل اقدامات، عیب‌یابی، تعویض رله، تست سیگنال تله‌متری، تنظیم پارامترها و توضیحات شیفت کاری را در این بخش وارد نمایید..." class="w-full bg-slate-950/90 border border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-500 leading-relaxed outline-none resize-y"></textarea>
+      </div>
+
+      <!-- کارت ۶: همکاران همراه (Dynamic Rows) -->
+      <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-lg space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <h2 class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            <span>همکاران همراه در این گراف</span>
+          </h2>
+          <span class="text-[11px] text-slate-400">شماره پرسنلی نفرات تیم</span>
+        </div>
+
+        <div class="flex gap-2">
+          <input type="text" id="colleaguePersonnelInput" placeholder="شماره پرسنلی همکار (مثال: 98112)" class="flex-1 bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2 text-sm font-mono text-slate-100 outline-none">
+          <button type="button" onclick="addColleague()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:bg-amber-600 active:text-slate-950 text-amber-400 font-bold border border-slate-700 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>افزودن</span>
+          </button>
+        </div>
+
+        <!-- فهرست همکاران افزوده شده -->
+        <div id="colleaguesListContainer" class="flex flex-wrap gap-2 pt-1">
+          <span class="text-xs text-slate-400">همکاری ثبت نشده است.</span>
+        </div>
+      </div>
+
+      <!-- کارت ۷: تاریخ و زمان شمسی + موقعیت جغرافیایی GPS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        
+        <!-- ساعت و تاریخ شمسی -->
+        <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 shadow-lg space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-2">
+            <span class="font-bold text-amber-400 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              زمان و تاریخ ثبت (شمسی)
+            </span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">خودکار</span>
+          </div>
+          <div id="liveJalaliDateText" class="text-sm font-bold text-slate-100 pt-1">
+            در حال دریافت زمان سیستم...
+          </div>
+          <p class="text-[11px] text-slate-400">زمان دقیق لحظه‌ای همراه با رکورد در دیتابیس قفل می‌شود.</p>
+        </div>
+
+        <!-- موقعیت جغرافیایی GPS -->
+        <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 shadow-lg space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-2">
+            <span class="font-bold text-amber-400 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              موقعیت مکانی (GPS)
+            </span>
+            <div class="flex items-center gap-1.5">
+              <span id="gpsIndicator" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+              <button type="button" onclick="updateGPSLocation()" class="text-[11px] text-blue-400 hover:text-blue-300 underline font-medium">بروزرسانی</button>
+            </div>
+          </div>
+          <div id="gpsStatusText" class="text-xs text-slate-200 font-medium">در حال بررسی مختصات...</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span id="gpsCoordsText">عرض: --- | طول: ---</span>
+            <button id="viewOnMapBtn" type="button" class="hidden text-blue-400 hover:underline">نقشه</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- دکمه نهایی بزرگ صنعتی: ثبت و ذخیره گراف -->
+      <div class="pt-2">
+        <button type="submit" id="submitGraphBtn" class="w-full bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.99] text-slate-950 font-black text-base sm:text-lg py-4 px-6 rounded-2xl shadow-xl shadow-amber-500/20 flex items-center justify-center gap-3 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <span>ثبت و ذخیره نهایی گراف در سیستم (Offline-First)</span>
+        </button>
+        <p class="text-center text-xs text-slate-400 mt-2">
+          اطلاعات به صورت امن در مرورگر ذخیره شده و در صورت آنلاین بودن بلافاصله همگام‌سازی می‌شود.
+        </p>
+      </div>
+
+    </form>
+  </main>
+
+  <!-- =========================================================================
+       بخش دوم: صفحه مدیران سیستم و پنل ادمین (Admin View)
+       ========================================================================= -->
+  <section id="adminViewSection" class="hidden flex-1 max-w-6xl w-full mx-auto p-3 sm:p-5 space-y-5">
+    
+    <!-- هدر پنل ادمین -->
+    <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-slate-100">
+            پنل مدیریت اتوماسیون و ارتباطات
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            کاربر جاری: <strong id="adminUserTitle" class="text-amber-300">احسان ابوالقاسمی</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="switchToHomeView()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span>بازگشت به ثبت گراف</span>
+        </button>
+        <button type="button" onclick="handleAdminLogout()" class="px-3.5 py-2 bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <span>خروج</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- وضعیت ارتباط بلادرنگ با سرور مرکزی و کلاینت‌های PWA -->
+    <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div id="centralServerDot" class="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-100">ارتباط بلادرنگ سرور مرکزی (SSE)</h3>
+            <span id="centralServerStatusTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">برخط و فعال</span>
+          </div>
+          <p id="centralServerStatusDesc" class="text-[11px] text-slate-400 mt-0.5">
+            PWAهای محلی به محض اولین اتصال به اینترنت، تمام گراف‌ها و گزارش‌ها را به صورت خودکار و بلادرنگ برای این سرور ارسال می‌کنند.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" onclick="loadAdminReports()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span>بروزرسانی داده‌های سرور</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- کارت‌های شاخص عملکرد کلیدی (KPIs) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 shadow">
+        <span class="text-xs text-slate-400 block">کل گراف‌های ثبت‌شده</span>
+        <div id="kpiTotalCount" class="text-xl sm:text-2xl font-black text-amber-400 font-mono mt-1">0</div>
+      </div>
+      <div class="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 shadow">
+        <span class="text-xs text-slate-400 block">گراف‌های امروز</span>
+        <div id="kpiTodayCount" class="text-xl sm:text-2xl font-black text-blue-400 font-mono mt-1">0</div>
+      </div>
+      <div class="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 shadow">
+        <span class="text-xs text-slate-400 block">در صف ارسال (آفلاین)</span>
+        <div id="kpiPendingCount" class="text-xl sm:text-2xl font-black text-amber-500 font-mono mt-1">0</div>
+      </div>
+      <div class="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 shadow">
+        <span class="text-xs text-slate-400 block">همگام‌شده با سرور</span>
+        <div id="kpiSyncedCount" class="text-xl sm:text-2xl font-black text-emerald-400 font-mono mt-1">0</div>
+      </div>
+    </div>
+
+    <!-- تب‌های ناوبری پنل ادمین -->
+    <div class="flex flex-wrap border-b border-slate-800 gap-2">
+      <button type="button" id="tabBtnReports" onclick="showAdminTab('reports')" class="px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-amber-500 text-amber-400 flex items-center gap-1.5 transition">
+        <span>گزارش‌گیری و کارتابل</span>
+      </button>
+      <button type="button" id="tabBtnOrgManage" onclick="showAdminTab('orgManage')" class="px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+        <span>تعریف سرپرستی‌ها و واحدها</span>
+      </button>
+      <button type="button" id="tabBtnAdminManage" onclick="showAdminTab('adminManage')" class="px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+        <span>تعریف و سطوح دسترسی مدیران</span>
+      </button>
+      <button type="button" id="tabBtnBackup" onclick="showAdminTab('backup')" class="px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition">
+        <span>پشتیبان‌گیری و بازنشانی</span>
+      </button>
+    </div>
+
+    <!-- تب ۱: گزارش‌گیری، جستجو، فیلتر و جدول پیشرفته -->
+    <div id="adminTabReports" class="space-y-4">
+      
+      <!-- نوار فیلتر و جستجوی پیشرفته -->
+      <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 shadow-md space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- جستجوی متنی -->
+          <div class="space-y-1">
+            <label for="filterSearchInput" class="text-xs text-slate-300 font-medium">جستجو (پرسنل، شرح، تجهیز):</label>
+            <input type="text" id="filterSearchInput" oninput="applyAdminFilters()" placeholder="کلمه کلیدی..." class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+          </div>
+
+          <!-- فیلتر نوع فعالیت -->
+          <div class="space-y-1">
+            <label for="filterActivitySelect" class="text-xs text-slate-300 font-medium">فیلتر نوع فعالیت:</label>
+            <select id="filterActivitySelect" onchange="applyAdminFilters()" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+              <option value="">-- همه فعالیت‌ها --</option>
+              <option value="انجام بازدید و سرکشی">انجام بازدید و سرکشی</option>
+              <option value="سرویس و هواگیری و نظافت">سرویس و هواگیری و نظافت</option>
+              <option value="آچارکشی اتصالات و تبدیلات مکانیکی و گلندها">آچارکشی اتصالات و تبدیلات</option>
+              <option value="آچارکشی ترمینال‌ها و فیوزها">آچارکشی ترمینال‌ها و فیوزها</option>
+              <option value="مونتاژ تجهیزات">مونتاژ تجهیزات</option>
+              <option value="دمونتاژ تجهیزات">دمونتاژ تجهیزات</option>
+              <option value="انجام تنظیمات حرفه‌ای">انجام تنظیمات حرفه‌ای</option>
+              <option value="انجام کابل‌کشی">انجام کابل‌کشی</option>
+              <option value="انجام کاندوئیت‌کاری">انجام کاندوئیت‌کاری</option>
+            </select>
+          </div>
+
+          <!-- فیلتر واحد خدمتی -->
+          <div class="space-y-1">
+            <label for="filterUnitSelect" class="text-xs text-slate-300 font-medium">فیلتر واحد خدمتی:</label>
+            <select id="filterUnitSelect" onchange="applyAdminFilters()" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+              <option value="">-- همه واحدها --</option>
+              <option value="واحد اتوماسیون صنعتی و PLC">واحد اتوماسیون صنعتی و PLC</option>
+              <option value="واحد تله‌متری و ابزار دقیق">واحد تله‌متری و ابزار دقیق</option>
+              <option value="واحد مخابرات و ارتباطات رادیویی">واحد مخابرات و ارتباطات رادیویی</option>
+              <option value="واحد شبکه‌های صنعتی و SCADA">واحد شبکه‌های صنعتی و SCADA</option>
+              <option value="واحد فیبر نوری و خطوط ارتباطی">واحد فیبر نوری و خطوط ارتباطی</option>
+            </select>
+          </div>
+
+          <!-- فیلتر تاریخ شمسی از/تا -->
+          <div class="space-y-1">
+            <label for="filterDateFrom" class="text-xs text-slate-300 font-medium">تاریخ شمسی (از - تا):</label>
+            <div class="flex gap-1.5">
+              <input type="text" id="filterDateFrom" oninput="applyAdminFilters()" placeholder="از: ۱۴۰۵/۰۱/۰۱" class="w-1/2 bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-mono text-slate-100 outline-none">
+              <input type="text" id="filterDateTo" oninput="applyAdminFilters()" placeholder="تا: ۱۴۰۵/۱۲/۲۹" class="w-1/2 bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs font-mono text-slate-100 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- دکمه‌های عملیاتی: خروجی اکسل، خروجی PDF و پاکسازی فیلترها -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="resetAdminFilters()" class="text-xs text-slate-400 hover:text-slate-200">
+            پاکسازی فیلترها
+          </button>
+          
+          <div class="flex items-center gap-2">
+            <!-- خروجی اکسل با UTF-8 BOM -->
+            <button type="button" onclick="exportToExcel()" class="px-3.5 py-2 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>خروجی Excel (CSV)</span>
+            </button>
+
+            <!-- خروجی PDF و پرینت فرم رسمی -->
+            <button type="button" onclick="printReportsAsPDF()" class="px-3.5 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              <span>چاپ / خروجی PDF</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- جدول ریسپانسیو گزارش‌ها -->
+      <div class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-bold">
+              <tr>
+                <th class="p-3 text-center w-12">#</th>
+                <th class="p-3">تاریخ و زمان</th>
+                <th class="p-3">مجری (شماره پرسنلی)</th>
+                <th class="p-3">واحد خدمتی</th>
+                <th class="p-3">نوع فعالیت</th>
+                <th class="p-3">کدهای تجهیز</th>
+                <th class="p-3 text-center">وضعیت</th>
+                <th class="p-3 text-center">تصویر</th>
+                <th class="p-3 text-center">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody">
+              <!-- ردیف‌های جدول توسط JavaScript تزریق می‌شوند -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- حالت خالی بودن جدول -->
+        <div id="reportsEmptyState" class="p-10 text-center text-slate-400 space-y-2">
+          <svg class="w-12 h-12 mx-auto text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <p class="text-sm font-bold text-slate-300">هیچ گزارشی با مشخصات مورد نظر یافت نشد.</p>
+          <p class="text-xs">می‌توانید فیلترها را پاکسازی کنید یا گزارش جدیدی در صفحه ثبت گراف ثبت نمایید.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- تب ۲: تعریف سرپرستی‌ها و واحدها (مخصوص مدیر اصلی سیستم) -->
+    <div id="adminTabOrg" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- کارت ۱: مدیریت و تعریف سرپرستی‌ها -->
+        <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl space-y-4">
+          <div class="border-b border-slate-800 pb-2.5 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-black text-amber-400">تعریف سرپرستی‌های اتوماسیون و ارتباطات</h3>
+              <p class="text-xs text-slate-400 mt-0.5">افزودن و مدیریت حوزه‌های سرپرستی جهت انتساب به پرسنل و مدیران</p>
+            </div>
+            <span id="supervisionsCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">۰ سرپرستی</span>
+          </div>
+
+          <!-- فرم افزودن سرپرستی -->
+          <form id="newSupervisionForm" onsubmit="handleCreateSupervision(event)" class="space-y-2">
+            <div class="flex gap-2">
+              <input type="text" id="newSupervisionInput" required placeholder="عنوان سرپرستی جدید (مثال: سرپرستی هوشمندسازی و IoT)..." class="flex-1 bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-slate-100 outline-none">
+              <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold rounded-xl text-xs transition shrink-0 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>افزودن</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- لیست سرپرستی‌های موجود -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold text-slate-300">فهرست سرپرستی‌های تعریف‌شده:</div>
+            <div id="supervisionsListContainer" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+              <!-- توسط JS پر می‌شود -->
+            </div>
+          </div>
+        </div>
+
+        <!-- کارت ۲: مدیریت و تعریف واحدها -->
+        <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl space-y-4">
+          <div class="border-b border-slate-800 pb-2.5 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-black text-amber-400">تعریف واحدهای سازمانی</h3>
+              <p class="text-xs text-slate-400 mt-0.5">افزودن و مدیریت واحدهای اجرایی و انتساب آن‌ها به سرپرستی‌ها</p>
+            </div>
+            <span id="unitsCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">۰ واحد</span>
+          </div>
+
+          <!-- فرم افزودن واحد جدید -->
+          <form id="newUnitForm" onsubmit="handleCreateUnit(event)" class="space-y-2.5">
+            <div class="space-y-1">
+              <label for="newUnitInput" class="block text-xs text-slate-300">عنوان واحد جدید:</label>
+              <input type="text" id="newUnitInput" required placeholder="مثال: واحد کنترل فرآیند و ابزار دقیق ۲" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-slate-100 outline-none">
+            </div>
+            <div class="space-y-1">
+              <label for="newUnitSupervisionSelect" class="block text-xs text-slate-300">سرپرستی مربوطه (اختیاری):</label>
+              <select id="newUnitSupervisionSelect" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                <option value="">-- انتخاب سرپرستی مرتبط --</option>
+              </select>
+            </div>
+            <button type="submit" class="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>افزودن واحد سازمانی</span>
+            </button>
+          </form>
+
+          <!-- لیست واحدهای موجود -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold text-slate-300">فهرست واحدهای تعریف‌شده:</div>
+            <div id="unitsListContainer" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+              <!-- توسط JS پر می‌شود -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- نوار عملیاتی بازنشانی به مقادیر اولیه -->
+      <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <span class="text-slate-400">تغییرات در سرپرستی‌ها و واحدها بلافاصله در فرم‌های ثبت گراف، فیلترها و لیست مجریان اعمال می‌شود.</span>
+        <button type="button" onclick="resetOrgStructureToDefault()" class="text-amber-400 hover:text-amber-300 underline font-semibold shrink-0">
+          بازنشانی به سرپرستی‌ها و واحدهای پیش‌فرض سیستم
+        </button>
+      </div>
+    </div>
+
+    <!-- تب ۳: تعریف مدیران جدید و سطوح دسترسی (Super Admin) -->
+    <div id="adminTabManage" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- فرم تعریف مدیر جدید -->
+        <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl space-y-4">
+          <div class="border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-black text-amber-400">تعریف مدیر جدید سیستم</h3>
+            <p class="text-xs text-slate-400 mt-0.5">تعیین نام کاربری و محدودسازی حوزه دسترسی به واحد و سرپرستی مشخص</p>
+          </div>
+
+          <form id="newAdminForm" class="space-y-3">
+            <div class="space-y-1">
+              <label for="newAdminFullName" class="block text-xs text-slate-300">نام و نام خانوادگی:</label>
+              <input type="text" id="newAdminFullName" required placeholder="مثال: مهندس احمدی" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <label for="newAdminUsername" class="block text-xs text-slate-300">نام کاربری:</label>
+                <input type="text" id="newAdminUsername" required placeholder="مثال: ahmadi" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 outline-none">
+              </div>
+              <div class="space-y-1">
+                <label for="newAdminPassword" class="block text-xs text-slate-300">کلمه عبور:</label>
+                <input type="password" id="newAdminPassword" required placeholder="رمز عبور..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+              </div>
+            </div>
+
+            <!-- محدودسازی واحد خدمتی مجاز -->
+            <div class="space-y-1">
+              <label for="newAdminUnit" class="block text-xs text-slate-300">واحد خدمتی مجاز جهت گزارش‌گیری:</label>
+              <select id="newAdminUnit" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                <option value="همه واحدها">کل واحدها (بدون محدودیت)</option>
+              </select>
+            </div>
+
+            <!-- محدودسازی سرپرستی مجاز -->
+            <div class="space-y-1">
+              <label for="newAdminSupervision" class="block text-xs text-slate-300">سرپرستی مجاز:</label>
+              <select id="newAdminSupervision" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none">
+                <option value="همه سرپرستی‌ها">کل سرپرستی‌ها (بدون محدودیت)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition">
+              ثبت و ایجاد مدیر جدید
+            </button>
+          </form>
+        </div>
+
+        <!-- لیست مدیران تعریف شده -->
+        <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl space-y-3">
+          <div class="border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-black text-slate-100">فهرست مدیران سیستم</h3>
+            <p class="text-xs text-slate-400 mt-0.5">مدیران تعریف‌شده و حوزه‌های دسترسی آن‌ها</p>
+          </div>
+          <div id="adminUsersListContainer" class="space-y-2.5">
+            <!-- توسط JS لود می‌شود -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- تب ۳: پشتیبان‌گیری (Backup) و بازنشانی (Restore) -->
+    <div id="adminTabBackup" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- کارت دانلود فایل بک‌آپ -->
+        <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl space-y-3">
+          <div class="border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-black text-amber-400 flex items-center gap-2">
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>دریافت فایل پشتیبان کامل (Backup JSON)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">دانلود کل اطلاعات پایگاه‌داده محلی (گراف‌ها، مدیران و تنظیمات) در قالب فایل JSON استاندارد</p>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            این فایل برای انتقال به رایانه‌های دیگر، بایگانی دوره‌ای و اطمینان از عدم مفقودی داده‌ها در صورت پاک شدن حافظه مرورگر استفاده می‌شود.
+          </p>
+          <button type="button" onclick="exportFullBackup()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold border border-slate-700 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>دانلود فایل پشتیبان (JSON)</span>
+          </button>
+        </div>
+
+        <!-- کارت بازیابی و بازنشانی بک‌آپ -->
+        <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl space-y-3">
+          <div class="border-b border-slate-800 pb-2.5">
+            <h3 class="text-sm font-black text-red-400 flex items-center gap-2">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/></svg>
+              <span>بازنشانی و بازیابی اطلاعات (Restore)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">بارگذاری فایل پشتیبان JSON و جایگزینی/به‌روزرسانی داده‌ها در دیتابیس IndexedDB</p>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            با انتخاب فایل پشتیبان، تمام اطلاعات گراف‌ها و مدیران استخراج و در حافظه دستگاه جاری ذخیره می‌گردد.
+          </p>
+          <input type="file" id="restoreFileInput" accept=".json" class="hidden">
+          <button type="button" onclick="document.getElementById('restoreFileInput').click()" class="w-full py-3 bg-red-950/40 hover:bg-red-950/70 text-red-300 font-bold border border-red-800/80 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            <span>انتخاب و بارگذاری فایل JSON جهت بازنشانی</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       مودال‌ها (Modals): اشخاص، اسکنر QR، ورود ادمین، جزئیات رکورد، راهنمای PWA
+       ========================================================================= -->
+
+  <!-- ۱. مودال مدیریت اشخاص (اطلاعات تکنسین مجری) -->
+  <div id="personnelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl p-5 space-y-4 my-8">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-amber-400 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <span>مدیریت و ثبت اطلاعات شخص (مجری)</span>
+        </h3>
+        <button type="button" onclick="closeModal('personnelModal')" class="text-slate-400 hover:text-slate-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="personnelProfileForm" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label for="modalFirstName" class="block text-xs font-bold text-slate-300">نام: <span class="text-red-400">*</span></label>
+            <input type="text" id="modalFirstName" required placeholder="مثال: رضا" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+          </div>
+          <div class="space-y-1">
+            <label for="modalLastName" class="block text-xs font-bold text-slate-300">نام خانوادگی: <span class="text-red-400">*</span></label>
+            <input type="text" id="modalLastName" required placeholder="مثال: رضایی" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label for="modalPersonnelId" class="block text-xs font-bold text-slate-300">شماره پرسنلی: <span class="text-red-400">*</span></label>
+          <input type="text" id="modalPersonnelId" required placeholder="مثال: 984521" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono text-slate-100 outline-none">
+        </div>
+
+        <div class="space-y-1">
+          <label for="modalSupervision" class="block text-xs font-bold text-slate-300">سرپرستی: <span class="text-red-400">*</span></label>
+          <select id="modalSupervision" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+            <option value="">-- انتخاب سرپرستی مربوطه --</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="modalUnit" class="block text-xs font-bold text-slate-300">واحد خدمتی: <span class="text-red-400">*</span></label>
+          <select id="modalUnit" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+            <option value="">-- انتخاب واحد خدمتی --</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="modalRole" class="block text-xs font-bold text-slate-300">سمت سازمانی:</label>
+          <input type="text" id="modalRole" placeholder="مثال: تکنسین ارشد اتوماسیون" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button type="submit" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold rounded-xl text-sm transition">
+            ذخیره اطلاعات در LocalStorage
+          </button>
+          <button type="button" onclick="closeModal('personnelModal')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm transition">
+            انصراف
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ۲. مودال اسکن بارکد و QR Code -->
+  <div id="qrScannerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <h3 id="qrModalTitle" class="text-sm font-extrabold text-amber-400">اسکن بارکد / QR کد</h3>
+        <button type="button" onclick="closeQrScannerModal()" class="text-slate-400 hover:text-slate-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- کادر دوربین ویدیو -->
+      <div class="relative w-full aspect-square bg-black rounded-xl overflow-hidden border-2 border-dashed border-amber-500/60 flex items-center justify-center">
+        <video id="qrVideo" class="w-full h-full object-cover"></video>
+        <!-- خط اسکن لیزری -->
+        <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 bg-amber-400 shadow-lg shadow-amber-500 animate-pulse pointer-events-none"></div>
+      </div>
+      <p id="qrScannerStatus" class="text-center text-xs text-slate-400">در حال فعال‌سازی دوربین؛ بارکد را مقابل کادر بگیرید...</p>
+    </div>
+  </div>
+
+  <!-- ۳. مودال ورود ادمین -->
+  <div id="loginModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto mb-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h3 class="text-base font-black text-slate-100">ورود به پنل مدیریت</h3>
+        <p class="text-xs text-slate-400">احراز هویت و دسترسی به سامانه مدیریت</p>
+      </div>
+
+      <form id="adminLoginForm" class="space-y-3">
+        <div class="space-y-1">
+          <label for="loginUsername" class="block text-xs font-bold text-slate-300">نام کاربری:</label>
+          <input type="text" id="loginUsername" required placeholder="نام کاربری..." class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 outline-none">
+        </div>
+
+        <div class="space-y-1">
+          <label for="loginPassword" class="block text-xs font-bold text-slate-300">رمز عبور:</label>
+          <input type="password" id="loginPassword" required placeholder="رمز عبور..." class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 outline-none">
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition">
+            ورود به پنل
+          </button>
+          <button type="button" onclick="closeModal('loginModal')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm transition">
+            انصراف
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ۴. مودال مشاهده جزئیات کامل رکورد -->
+  <div id="reportDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl shadow-2xl p-5 space-y-4 my-8">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-extrabold text-amber-400 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>جزئیات کامل گراف ثبت‌شده</span>
+        </h3>
+        <button type="button" onclick="closeModal('reportDetailModal')" class="text-slate-400 hover:text-slate-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="reportDetailContent" class="space-y-3">
+        <!-- محتوا به صورت داینامیک توسط JS پر می‌شود -->
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 text-left">
+        <button type="button" onclick="closeModal('reportDetailModal')" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition">
+          بستن پنجره
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ۵. راهنمای نصب PWA روی iOS Safari -->
+  <div id="iosInstallModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-5 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      </div>
+      <h3 class="text-base font-bold text-slate-100">نصب اپلیکیشن روی آیفون / آیپد</h3>
+      <p class="text-xs text-slate-300 leading-relaxed text-right">
+        ۱. در نوار پایین مرورگر Safari، روی دکمه <strong>اشتراک‌گذاری (Share)</strong> ضربه بزنید.<br>
+        ۲. گزینه <strong>Add to Home Screen (افزودن به صفحه اصلی)</strong> را انتخاب کنید.<br>
+        ۳. بر روی Add کلیک کنید تا آیکون اپلیکیشن همانند برنامه اختصاصی نصب شود.
+      </p>
+      <button type="button" onclick="closeModal('iosInstallModal')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition">
+        متوجه شدم
+      </button>
+    </div>
+  </div>
+
+  <!-- ظرف اعلان‌های شناور (Toast Container) -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-50 space-y-2 pointer-events-none">
+    <!-- پیام‌های پاپ‌آپ داخل این تگ تزریق می‌شوند -->
+  </div>
+
+  <!-- اسکریپت سوئیچ بین تب‌های ادمین -->
+  <script>
+    function showAdminTab(tabName) {
+      const tabs = ['adminTabReports', 'adminTabOrg', 'adminTabManage', 'adminTabBackup'];
+      tabs.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+
+      const inactiveClass = 'px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition';
+      const activeClass = 'px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-amber-500 text-amber-400 flex items-center gap-1.5 transition';
+
+      const btnReports = document.getElementById('tabBtnReports');
+      const btnOrg = document.getElementById('tabBtnOrgManage');
+      const btnManage = document.getElementById('tabBtnAdminManage');
+      const btnBackup = document.getElementById('tabBtnBackup');
+
+      if (btnReports) btnReports.className = inactiveClass;
+      if (btnOrg) btnOrg.className = inactiveClass;
+      if (btnManage) btnManage.className = inactiveClass;
+      if (btnBackup) btnBackup.className = inactiveClass;
+
+      if (tabName === 'reports') {
+        const el = document.getElementById('adminTabReports');
+        if (el) el.classList.remove('hidden');
+        if (btnReports) btnReports.className = activeClass;
+      } else if (tabName === 'orgManage') {
+        const el = document.getElementById('adminTabOrg');
+        if (el) el.classList.remove('hidden');
+        if (btnOrg) btnOrg.className = activeClass;
+        if (typeof renderOrgManagementUI === 'function') renderOrgManagementUI();
+      } else if (tabName === 'adminManage') {
+        const el = document.getElementById('adminTabManage');
+        if (el) el.classList.remove('hidden');
+        if (btnManage) btnManage.className = activeClass;
+      } else if (tabName === 'backup') {
+        const el = document.getElementById('adminTabBackup');
+        if (el) el.classList.remove('hidden');
+        if (btnBackup) btnBackup.className = activeClass;
+      }
+    }
+  </script>
+
+  <!-- بارگذاری هسته منطق، دیتابیس IndexedDB و عملیات PWA -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "ثبت گراف اتوماسیون و ارتباطات",
+  "description": "سامانه پیشرونده (PWA) آفلاین ثبت گراف و گزارش‌های میدانی اتوماسیون و ارتباطات به همراه پنل مدیریت، خروجی اکسل و هماهنگ‌سازی خودکار",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

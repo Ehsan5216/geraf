@@ -1,0 +1,29 @@
+{
+  "id": "/",
+  "name": "ثبت گراف مدیریت اتوماسیون و ارتباطات",
+  "short_name": "ثبت گراف",
+  "description": "سامانه صنعتی ثبت گراف، گزارش‌های میدانی و تعمیرات اتوماسیون و ارتباطات با عملکرد کاملاً آفلاین",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "fa",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
